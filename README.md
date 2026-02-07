@@ -18,7 +18,13 @@ Grab the latest release for your platform from the [Releases page](https://githu
 
 ## Installation
 
-**macOS:** Open the `.dmg` and drag De-Id to Applications. On first launch, macOS will block the unsigned app. Go to **System Settings > Privacy & Security**, scroll down, and click **Open Anyway**.
+**macOS:** Open the `.dmg` and drag De-Id to Applications. On first launch, macOS will block the unsigned app. If you see a "damaged and can't be opened" error, run:
+
+```sh
+xattr -cr /Applications/De-Id.app
+```
+
+Otherwise, go to **System Settings > Privacy & Security**, scroll down, and click **Open Anyway**.
 
 **Windows:** Run the `.exe` installer. Windows SmartScreen may warn about an unrecognized app — click **More info** then **Run anyway**.
 
