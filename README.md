@@ -2,6 +2,9 @@
 
 Local text de-identification tool. Paste text containing personal information, and De-Id redacts emails and names — all processing stays on your machine.
 
+<img width="978" height="589" alt="image" src="https://github.com/user-attachments/assets/0e7e1c75-2048-48d5-8cc7-f8983eaa2379" />
+
+
 ## Download
 
 Grab the latest release for your platform from the [Releases page](https://github.com/sdrshnv/deid/releases).
