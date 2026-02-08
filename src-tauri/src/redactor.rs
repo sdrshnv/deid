@@ -72,7 +72,8 @@ mod tests {
         assert_eq!(entries.len(), 100, "Expected 100 faker entries");
 
         let mut missed_emails: Vec<String> = Vec::new();
-        let mut missed_names: Vec<String> = Vec::new();
+        let mut missed_first_names: Vec<String> = Vec::new();
+        let mut missed_last_names: Vec<String> = Vec::new();
 
         // Helper: serialize entries to pretty JSON
         fn entries_to_json(entries: &[&FakerEntry]) -> String {
@@ -141,13 +142,13 @@ mod tests {
                     missed_emails.push(format!("batch {}: {}", batch_idx, entry.email));
                 }
                 if redacted.contains(&entry.first_name) {
-                    missed_names.push(format!(
+                    missed_first_names.push(format!(
                         "batch {}: firstName={}",
                         batch_idx, entry.first_name
                     ));
                 }
                 if redacted.contains(&entry.last_name) {
-                    missed_names.push(format!(
+                    missed_last_names.push(format!(
                         "batch {}: lastName={}",
                         batch_idx, entry.last_name
                     ));
@@ -164,12 +165,20 @@ mod tests {
                 missed_emails.join("\n")
             );
         }
-        if !missed_names.is_empty() {
+        if !missed_first_names.is_empty() {
             eprintln!(
-                "\nMISSED NAMES ({}/{}):\n{}",
-                missed_names.len(),
-                entries.len() * 2,
-                missed_names.join("\n")
+                "\nMISSED FIRST NAMES ({}/{}):\n{}",
+                missed_first_names.len(),
+                entries.len(),
+                missed_first_names.join("\n")
+            );
+        }
+        if !missed_last_names.is_empty() {
+            eprintln!(
+                "\nMISSED LAST NAMES ({}/{}):\n{}",
+                missed_last_names.len(),
+                entries.len(),
+                missed_last_names.join("\n")
             );
         }
 
@@ -179,9 +188,14 @@ mod tests {
             missed_emails.len()
         );
         assert!(
-            missed_names.is_empty(),
-            "{} names were not redacted",
-            missed_names.len()
+            missed_first_names.is_empty(),
+            "{} first names were not redacted",
+            missed_first_names.len()
+        );
+        assert!(
+            missed_last_names.is_empty(),
+            "{} last names were not redacted",
+            missed_last_names.len()
         );
     }
 }

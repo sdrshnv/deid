@@ -14,6 +14,8 @@ struct GenerateRequest {
 #[derive(Deserialize)]
 struct GenerateResponse {
     response: String,
+    /// Qwen3 (a thinking model) puts structured output in this field instead of `response`.
+    thinking: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -23,7 +25,7 @@ struct NamesResult {
 
 pub async fn detect_names(text: &str) -> Result<Vec<PiiEntity>, String> {
     let client = Client::builder()
-        .timeout(Duration::from_secs(30))
+        .timeout(Duration::from_secs(120))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -39,9 +41,16 @@ pub async fn detect_names(text: &str) -> Result<Vec<PiiEntity>, String> {
     });
 
     let request = GenerateRequest {
-        model: "llama3.2:3b".to_string(),
+        model: "qwen3:4b".to_string(),
         prompt: format!(
-            "Extract every person name from the text below. Return each first name and each last name as separate items in the list. Include full names as well. Be thorough — do not skip unusual or uncommon names.\n\nText: {}",
+            "Extract every person name from the text below.\n\n\
+             Instructions:\n\
+             - Return each first name and each last name as separate items.\n\
+             - If the text contains labeled fields (e.g. \"firstName\", \"lastName\", \"name\", \"surname\"), \
+               treat every value associated with those fields as a person name regardless of how unusual it looks.\n\
+             - Include hyphenated names (e.g. \"Smith-Jones\") and names with apostrophes (e.g. \"O'Brien\") as complete single names.\n\
+             - Be thorough — do not skip unusual, uncommon, or non-English names. If a value is labeled as a name, it IS a name.\n\n\
+             Text: {}",
             text
         ),
         stream: false,
@@ -60,7 +69,13 @@ pub async fn detect_names(text: &str) -> Result<Vec<PiiEntity>, String> {
         .await
         .map_err(|e| format!("Failed to parse Ollama response: {}", e))?;
 
-    let names_result: NamesResult = serde_json::from_str(&gen_response.response)
+    let json_str = if gen_response.response.is_empty() {
+        gen_response.thinking.as_deref().unwrap_or("")
+    } else {
+        &gen_response.response
+    };
+
+    let names_result: NamesResult = serde_json::from_str(json_str)
         .map_err(|e| format!("Failed to parse names JSON: {}", e))?;
 
     let mut entities = Vec::new();

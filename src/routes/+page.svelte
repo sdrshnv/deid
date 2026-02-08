@@ -132,9 +132,9 @@
         </button>
       {/if}
     </div>
-    <div class="status" title={ollamaConnected ? "Ollama connected" : "Ollama unavailable — name detection disabled"}>
+    <div class="status" title={ollamaConnected ? "Name detection active" : "Name detection unavailable — LLM not connected"}>
       <span class="status-dot" class:connected={ollamaConnected} class:disconnected={!ollamaConnected}></span>
-      <span class="status-label">{ollamaConnected ? "Ollama connected" : "Ollama unavailable"}</span>
+      <span class="status-label">{ollamaConnected ? "LLM connected" : "LLM unavailable"}</span>
     </div>
   </header>
 

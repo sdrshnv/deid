@@ -36,10 +36,10 @@ Otherwise, go to **System Settings > Privacy & Security**, scroll down, and clic
 
 De-Id detects **email addresses** using built-in pattern matching (always available).
 
-For **name detection**, you need [Ollama](https://ollama.com) running locally with the `llama3.2:3b` model:
+For **name detection**, you need [Ollama](https://ollama.com) running locally with the `qwen3:4b` model:
 
 ```sh
-ollama pull llama3.2:3b
+ollama pull qwen3:4b
 ollama serve   # if not already running
 ```
 

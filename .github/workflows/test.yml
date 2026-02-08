@@ -55,7 +55,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama/models
-          key: ollama-llama3.2-3b
+          key: ollama-qwen3-4b
 
       - name: Start Ollama
         run: |
@@ -70,7 +70,7 @@ jobs:
           done
 
       - name: Pull model
-        run: ollama pull llama3.2:3b
+        run: ollama pull qwen3:4b
 
       - name: Run tests
         run: cargo test --release --manifest-path src-tauri/Cargo.toml -- --nocapture
