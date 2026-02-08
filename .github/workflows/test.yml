@@ -1,0 +1,76 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-test-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-test-${{ runner.os }}-
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - name: Install npm dependencies and build frontend
+        run: npm install && npm run build
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Cache Ollama models
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-llama3.2-3b
+
+      - name: Start Ollama
+        run: |
+          ollama serve &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:11434/ > /dev/null 2>&1; then
+              echo "Ollama is ready"
+              break
+            fi
+            echo "Waiting for Ollama... ($i)"
+            sleep 2
+          done
+
+      - name: Pull model
+        run: ollama pull llama3.2:3b
+
+      - name: Run tests
+        run: cargo test --release --manifest-path src-tauri/Cargo.toml -- --nocapture

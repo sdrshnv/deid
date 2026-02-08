@@ -41,7 +41,7 @@ pub async fn detect_names(text: &str) -> Result<Vec<PiiEntity>, String> {
     let request = GenerateRequest {
         model: "llama3.2:3b".to_string(),
         prompt: format!(
-            "List every person name (first, last, or full) that appears in the following text. Return ONLY the names as a JSON object.\n\nText: {}",
+            "Extract every person name from the text below. Return each first name and each last name as separate items in the list. Include full names as well. Be thorough — do not skip unusual or uncommon names.\n\nText: {}",
             text
         ),
         stream: false,
@@ -69,8 +69,10 @@ pub async fn detect_names(text: &str) -> Result<Vec<PiiEntity>, String> {
             continue;
         }
         // Find all occurrences of this name in the original text
+        let mut found = false;
         let mut search_start = 0;
         while let Some(pos) = text[search_start..].find(name.as_str()) {
+            found = true;
             let start = search_start + pos;
             let end = start + name.len();
             entities.push(PiiEntity {
@@ -80,6 +82,29 @@ pub async fn detect_names(text: &str) -> Result<Vec<PiiEntity>, String> {
                 original: name.clone(),
             });
             search_start = end;
+        }
+
+        // If the full name wasn't found (e.g. LLM returned "Dasia Turner" but
+        // the text has firstName/lastName in separate JSON fields), search for
+        // each whitespace-delimited part individually.
+        if !found {
+            let parts: Vec<&str> = name.split_whitespace().collect();
+            if parts.len() > 1 {
+                for part in parts {
+                    let mut search_start = 0;
+                    while let Some(pos) = text[search_start..].find(part) {
+                        let start = search_start + pos;
+                        let end = start + part.len();
+                        entities.push(PiiEntity {
+                            entity_type: "name".to_string(),
+                            start,
+                            end,
+                            original: part.to_string(),
+                        });
+                        search_start = end;
+                    }
+                }
+            }
         }
     }
 

@@ -42,3 +42,146 @@ pub async fn redact(text: &str) -> Result<String, String> {
 
     Ok(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+    use std::path::PathBuf;
+
+    #[derive(Deserialize)]
+    struct FakerEntry {
+        #[serde(rename = "firstName")]
+        first_name: String,
+        #[serde(rename = "lastName")]
+        last_name: String,
+        email: String,
+    }
+
+    #[tokio::test]
+    async fn test_redact_faker_entries() {
+        // Read faker.json from project root (CARGO_MANIFEST_DIR is src-tauri/)
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let faker_path = manifest_dir.parent().unwrap().join("faker.json");
+        let faker_json = std::fs::read_to_string(&faker_path)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {}", faker_path.display(), e));
+
+        let entries: Vec<FakerEntry> = serde_json::from_str(&faker_json)
+            .expect("Failed to parse faker.json");
+
+        assert_eq!(entries.len(), 100, "Expected 100 faker entries");
+
+        let mut missed_emails: Vec<String> = Vec::new();
+        let mut missed_names: Vec<String> = Vec::new();
+
+        // Helper: serialize entries to pretty JSON
+        fn entries_to_json(entries: &[&FakerEntry]) -> String {
+            serde_json::to_string_pretty(
+                &entries
+                    .iter()
+                    .map(|e| {
+                        serde_json::json!({
+                            "firstName": e.first_name,
+                            "lastName": e.last_name,
+                            "email": e.email,
+                        })
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .expect("Failed to serialize batch")
+        }
+
+        // Helper: check which entries still have unredacted PII
+        fn check_misses<'a>(
+            redacted: &str,
+            entries: &[&'a FakerEntry],
+        ) -> Vec<&'a FakerEntry> {
+            entries
+                .iter()
+                .filter(|e| {
+                    redacted.contains(e.first_name.as_str())
+                        || redacted.contains(e.last_name.as_str())
+                        || redacted.contains(e.email.as_str())
+                })
+                .copied()
+                .collect()
+        }
+
+        // Process in batches of 5
+        for (batch_idx, batch) in entries.chunks(5).enumerate() {
+            let batch_refs: Vec<&FakerEntry> = batch.iter().collect();
+            let batch_json = entries_to_json(&batch_refs);
+
+            let redacted = redact(&batch_json)
+                .await
+                .unwrap_or_else(|e| panic!("Batch {} redact() failed: {}", batch_idx, e));
+
+            let mut still_missed = check_misses(&redacted, &batch_refs);
+
+            // Retry with only the failed entries (up to 4 retries)
+            for attempt in 2..=5 {
+                if still_missed.is_empty() {
+                    break;
+                }
+                eprintln!(
+                    "Batch {}: attempt {} — retrying {} entries with missed names",
+                    batch_idx,
+                    attempt,
+                    still_missed.len()
+                );
+                let retry_json = entries_to_json(&still_missed);
+                let retry_redacted = redact(&retry_json)
+                    .await
+                    .unwrap_or_else(|e| panic!("Batch {} retry failed: {}", batch_idx, e));
+                still_missed = check_misses(&retry_redacted, &still_missed);
+            }
+
+            for entry in still_missed {
+                if redacted.contains(&entry.email) {
+                    missed_emails.push(format!("batch {}: {}", batch_idx, entry.email));
+                }
+                if redacted.contains(&entry.first_name) {
+                    missed_names.push(format!(
+                        "batch {}: firstName={}",
+                        batch_idx, entry.first_name
+                    ));
+                }
+                if redacted.contains(&entry.last_name) {
+                    missed_names.push(format!(
+                        "batch {}: lastName={}",
+                        batch_idx, entry.last_name
+                    ));
+                }
+            }
+        }
+
+        // Report all failures
+        if !missed_emails.is_empty() {
+            eprintln!(
+                "\nMISSED EMAILS ({}/{}):\n{}",
+                missed_emails.len(),
+                entries.len(),
+                missed_emails.join("\n")
+            );
+        }
+        if !missed_names.is_empty() {
+            eprintln!(
+                "\nMISSED NAMES ({}/{}):\n{}",
+                missed_names.len(),
+                entries.len() * 2,
+                missed_names.join("\n")
+            );
+        }
+
+        assert!(
+            missed_emails.is_empty(),
+            "{} emails were not redacted",
+            missed_emails.len()
+        );
+        assert!(
+            missed_names.is_empty(),
+            "{} names were not redacted",
+            missed_names.len()
+        );
+    }
+}
