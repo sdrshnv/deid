@@ -47,20 +47,9 @@ A status indicator in the app header shows whether Ollama is connected. Without 
 
 ## How It Works
 
-The app has a two-panel layout: paste text on the left, click **Redact**, and the de-identified text appears on the right with PII replaced by `[REDACTED-email]` or `[REDACTED-name]` placeholders. Click the output to copy it to your clipboard.
+The app has a two-panel layout: paste text on the left, click **De-Id**, and the de-identified text appears on the right with PII replaced by `[REDACTED-email]` or `[REDACTED-name]` placeholders. Click the output to copy it to your clipboard.
 
 Detection uses a hybrid approach — regex for emails (instant) and Ollama for names (requires the local LLM). Overlapping detections are deduplicated automatically.
-
-## Development
-
-```sh
-git clone https://github.com/sdrshnv/deid.git
-cd deid
-npm install
-npm run tauri dev
-```
-
-Requires [Node.js](https://nodejs.org) (LTS) and [Rust](https://rustup.rs) (stable).
 
 ## Tech Stack
 
