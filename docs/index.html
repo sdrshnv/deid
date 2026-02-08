@@ -185,6 +185,16 @@
       color: var(--text-muted);
     }
 
+    .alt-download {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    .alt-download:hover {
+      text-decoration: underline;
+    }
+
     /* Features */
     .features {
       display: grid;
@@ -386,5 +396,103 @@
     MIT License
   </footer>
 
+  <script>
+    (function () {
+      const RELEASES_URL = 'https://api.github.com/repos/sdrshnv/deid/releases/latest';
+      const FALLBACK_URL = 'https://github.com/sdrshnv/deid/releases/latest';
+      const CACHE_KEY = 'deid-release';
+      const CACHE_TTL = 3600000; // 1 hour
+
+      // Detect OS
+      const ua = navigator.userAgent;
+      let os;
+      if (/Mac/i.test(ua)) os = 'macos';
+      else if (/Win/i.test(ua)) os = 'windows';
+      else if (/Linux/i.test(ua)) os = 'linux';
+
+      if (!os) return;
+
+      const matchAssets = (assets) => {
+        const map = {};
+        for (let i = 0; i < assets.length; i++) {
+          const name = assets[i].name;
+          const url = assets[i].browser_download_url;
+          if (/_aarch64\.dmg$/.test(name)) map['macos-arm'] = { url, label: 'Apple Silicon Mac' };
+          else if (/_x64\.dmg$/.test(name)) map['macos-intel'] = { url, label: 'Intel Mac' };
+          else if (/_x64-setup\.exe$/.test(name)) map['windows'] = { url, label: 'Windows' };
+          else if (/\.AppImage$/.test(name)) map['linux-appimage'] = { url, label: 'Linux' };
+          else if (/\.deb$/.test(name)) map['linux-deb'] = { url, label: '.deb package' };
+        }
+        return map;
+      };
+
+      const updateDOM = (assetMap) => {
+        let primary;
+        const alts = [];
+
+        if (os === 'macos') {
+          primary = assetMap['macos-arm'];
+          if (assetMap['macos-intel']) alts.push(assetMap['macos-intel']);
+          if (assetMap['windows']) alts.push(assetMap['windows']);
+          if (assetMap['linux-appimage']) alts.push(assetMap['linux-appimage']);
+        } else if (os === 'windows') {
+          primary = assetMap['windows'];
+          if (assetMap['macos-arm']) alts.push({ url: assetMap['macos-arm'].url, label: 'macOS' });
+          if (assetMap['linux-appimage']) alts.push(assetMap['linux-appimage']);
+        } else if (os === 'linux') {
+          primary = assetMap['linux-appimage'];
+          if (assetMap['linux-deb']) alts.push(assetMap['linux-deb']);
+          if (assetMap['macos-arm']) alts.push({ url: assetMap['macos-arm'].url, label: 'macOS' });
+          if (assetMap['windows']) alts.push(assetMap['windows']);
+        }
+
+        if (!primary) return;
+
+        const btn = document.querySelector('.download-btn');
+        const note = document.querySelector('.platform-note');
+        if (!btn) return;
+
+        const osLabel = os === 'macos' ? 'macOS' : os === 'windows' ? 'Windows' : 'Linux';
+        btn.textContent = 'Download for ' + osLabel;
+        btn.href = primary.url;
+
+        if (note && alts.length) {
+          const parts = [];
+          for (let j = 0; j < alts.length; j++) {
+            parts.push('<a class="alt-download" href="' + alts[j].url + '">' + alts[j].label + '</a>');
+          }
+          parts.push('<a class="alt-download" href="' + FALLBACK_URL + '">All downloads</a>');
+          note.innerHTML = 'Also available: ' + parts.join(' \u00b7 ');
+        }
+      };
+
+      // Check sessionStorage cache
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Date.now() - parsed.ts < CACHE_TTL) {
+            updateDOM(parsed.data);
+            return;
+          }
+        }
+      } catch (e) { /* ignore */ }
+
+      // Fetch latest release
+      fetch(RELEASES_URL)
+        .then((res) => {
+          if (!res.ok) throw new Error(res.status);
+          return res.json();
+        })
+        .then((release) => {
+          const assetMap = matchAssets(release.assets || []);
+          try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: assetMap }));
+          } catch (e) { /* ignore */ }
+          updateDOM(assetMap);
+        })
+        .catch(() => { /* fallback: button stays unchanged */ });
+    })();
+  </script>
 </body>
 </html>
