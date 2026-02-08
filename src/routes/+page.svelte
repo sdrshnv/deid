@@ -1,6 +1,9 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import { check } from "@tauri-apps/plugin-updater";
+  import { relaunch } from "@tauri-apps/plugin-process";
+  import { getVersion } from "@tauri-apps/api/app";
   import { onMount } from "svelte";
 
   let inputText = $state("");
@@ -9,8 +12,82 @@
   let ollamaConnected = $state(false);
   let copied = $state(false);
 
+  type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error';
+  let updateStatus: UpdateStatus = $state('idle');
+  let updateVersion = $state('');
+  let updateError = $state('');
+  let downloadedBytes = $state(0);
+  let downloadTotal = $state(0);
+  let currentVersion = $state('');
+  let updateObject: Awaited<ReturnType<typeof check>> = $state(null);
+
+  let downloadPercent = $derived(
+    downloadTotal > 0 ? Math.round((downloadedBytes / downloadTotal) * 100) : 0
+  );
+
+  async function checkForUpdate(silent = false) {
+    if (updateStatus === 'checking' || updateStatus === 'downloading') return;
+    updateStatus = 'checking';
+    updateError = '';
+    try {
+      const update = await check();
+      if (update) {
+        updateObject = update;
+        updateVersion = update.version;
+        updateStatus = 'available';
+      } else {
+        updateStatus = 'idle';
+      }
+    } catch (e) {
+      if (silent) {
+        updateStatus = 'idle';
+      } else {
+        updateError = String(e);
+        updateStatus = 'error';
+      }
+    }
+  }
+
+  async function downloadUpdate() {
+    if (!updateObject || updateStatus === 'downloading') return;
+    updateStatus = 'downloading';
+    downloadedBytes = 0;
+    downloadTotal = 0;
+    try {
+      await updateObject.downloadAndInstall((event) => {
+        switch (event.event) {
+          case 'Started':
+            downloadTotal = event.data.contentLength ?? 0;
+            break;
+          case 'Progress':
+            downloadedBytes += event.data.chunkLength;
+            break;
+          case 'Finished':
+            break;
+        }
+      });
+      updateStatus = 'ready';
+    } catch (e) {
+      updateError = String(e);
+      updateStatus = 'error';
+    }
+  }
+
+  async function installAndRestart() {
+    await relaunch();
+  }
+
+  function dismissError() {
+    updateStatus = 'idle';
+    updateError = '';
+  }
+
   onMount(async () => {
     ollamaConnected = await invoke<boolean>("check_ollama");
+    try {
+      currentVersion = await getVersion();
+    } catch {}
+    checkForUpdate(true);
   });
 
   async function handleRedact() {
@@ -39,12 +116,51 @@
 
 <main class="app">
   <header>
-    <h1>De-Id</h1>
+    <div class="header-left">
+      <h1>De-Id</h1>
+      {#if currentVersion}
+        <button
+          class="version-badge"
+          onclick={() => checkForUpdate(false)}
+          disabled={updateStatus === 'checking'}
+          title="Check for updates"
+        >
+          {#if updateStatus === 'checking'}
+            <span class="spinner-small"></span>
+          {/if}
+          v{currentVersion}
+        </button>
+      {/if}
+    </div>
     <div class="status" title={ollamaConnected ? "Ollama connected" : "Ollama unavailable — name detection disabled"}>
       <span class="status-dot" class:connected={ollamaConnected} class:disconnected={!ollamaConnected}></span>
       <span class="status-label">{ollamaConnected ? "Ollama connected" : "Ollama unavailable"}</span>
     </div>
   </header>
+
+  {#if updateStatus === 'available'}
+    <div class="update-banner">
+      <span>Update available: v{updateVersion}</span>
+      <button class="update-btn" onclick={downloadUpdate}>Download</button>
+    </div>
+  {:else if updateStatus === 'downloading'}
+    <div class="update-banner">
+      <span>Downloading v{updateVersion}... {downloadPercent}%</span>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: {downloadPercent}%"></div>
+      </div>
+    </div>
+  {:else if updateStatus === 'ready'}
+    <div class="update-banner ready">
+      <span>Update v{updateVersion} ready</span>
+      <button class="update-btn install" onclick={installAndRestart}>Install &amp; Restart</button>
+    </div>
+  {:else if updateStatus === 'error'}
+    <div class="update-banner error">
+      <span class="error-text">Update error: {updateError}</span>
+      <button class="update-btn dismiss" onclick={dismissError}>Dismiss</button>
+    </div>
+  {/if}
 
   <div class="panels">
     <div class="panel">
@@ -142,11 +258,121 @@
     justify-content: space-between;
   }
 
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   h1 {
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--primary);
+  }
+
+  .version-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color var(--transition), color var(--transition);
+  }
+
+  .version-badge:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .version-badge:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .spinner-small {
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  .update-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
+  .update-banner.ready {
+    border-color: #00b894;
+  }
+
+  .update-banner.error {
+    border-color: #d63031;
+  }
+
+  .error-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .update-btn {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    white-space: nowrap;
+    background: var(--accent);
+    color: #fff;
+    transition: opacity var(--transition);
+  }
+
+  .update-btn:hover {
+    opacity: 0.85;
+  }
+
+  .update-btn.install {
+    background: #00b894;
+  }
+
+  .update-btn.dismiss {
+    background: var(--text-muted);
+  }
+
+  .progress-bar {
+    flex: 1;
+    max-width: 200px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
   }
 
   .status {
