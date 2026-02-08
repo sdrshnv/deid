@@ -1,6 +1,6 @@
 [package]
 name = "deid"
-version = "0.3.2"
+version = "0.3.3"
 description = "Local text de-identification desktop app"
 authors = ["you"]
 edition = "2021"
