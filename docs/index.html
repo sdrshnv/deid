@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>De-Id — Local Text De-Identification Tool</title>
-  <meta name="description" content="Redact emails and names from text with De-Id. 100% local de-identification and PII redaction — no cloud, no servers. Free and open source.">
+  <meta name="description" content="Redact emails, names, and file paths from text with De-Id. 100% local de-identification and PII redaction — no cloud, no servers. Free and open source.">
   <link rel="canonical" href="https://sdrshnv.github.io/deid/">
   <link rel="icon" type="image/png" href="favicon.png">
 
@@ -12,13 +12,13 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://sdrshnv.github.io/deid/">
   <meta property="og:title" content="De-Id — Local Text De-Identification Tool">
-  <meta property="og:description" content="Redact emails and names from text. 100% local processing — no cloud, no servers. Free and open source.">
+  <meta property="og:description" content="Redact emails, names, and file paths from text. 100% local processing — no cloud, no servers. Free and open source.">
   <meta property="og:image" content="https://sdrshnv.github.io/deid/og-image.png">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="De-Id — Local Text De-Identification Tool">
-  <meta name="twitter:description" content="Redact emails and names from text. 100% local processing — no cloud, no servers.">
+  <meta name="twitter:description" content="Redact emails, names, and file paths from text. 100% local processing — no cloud, no servers.">
   <meta name="twitter:image" content="https://sdrshnv.github.io/deid/og-image.png">
 
   <!-- JSON-LD Structured Data -->
@@ -27,7 +27,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "De-Id",
-    "description": "Local text de-identification tool. Redact emails and names from text — all processing stays on your machine.",
+    "description": "Local text de-identification tool. Redact emails, names, and file paths from text — all processing stays on your machine.",
     "operatingSystem": "macOS, Windows, Linux",
     "applicationCategory": "UtilitiesApplication",
     "license": "https://opensource.org/licenses/MIT",
@@ -356,7 +356,7 @@
   <main>
     <section class="hero">
       <h1>De-Id</h1>
-      <p class="tagline">Redact emails and names from text. All processing stays on your machine.</p>
+      <p class="tagline">Redact emails, names, and file paths from text. All processing stays on your machine.</p>
       <a class="download-btn" href="https://github.com/sdrshnv/deid/releases/latest">Download De-Id</a>
       <p class="platform-note">Available for macOS, Windows, and Linux</p>
     </section>
@@ -370,7 +370,7 @@
       <div class="feature">
         <div class="feature-icon">&#x1F9E0;</div>
         <h3>Smart Detection</h3>
-        <p>Regex for emails, local LLM for names. Fast and accurate hybrid approach.</p>
+        <p>Regex for emails and file paths, local LLM for names. Fast and accurate hybrid approach.</p>
       </div>
       <div class="feature">
         <div class="feature-icon">&#x1F4DC;</div>
@@ -385,9 +385,9 @@
 
     <section class="about" id="about">
       <h2>About De-Id</h2>
-      <p>De-Id is a local text de-identification tool. Paste text containing personal information, and De-Id redacts emails and names &mdash; all processing stays on your machine.</p>
-      <p>The app has a simple two-panel layout: paste your text on the left, click <strong>De-Id</strong>, and de-identified text appears on the right with PII replaced by <code>[REDACTED-email]</code> or <code>[REDACTED-name]</code> placeholders. Click the output to copy it to your clipboard.</p>
-      <p>Email detection uses built-in pattern matching and is always available. For name detection, De-Id uses <a href="https://ollama.com">Ollama</a> running locally with the <code>qwen3:4b</code> model. A status indicator in the app shows whether Ollama is connected. Without Ollama, the app works in regex-only mode (emails only).</p>
+      <p>De-Id is a local text de-identification tool. Paste text containing personal information, and De-Id redacts emails, names, and file paths &mdash; all processing stays on your machine.</p>
+      <p>The app has a simple two-panel layout: paste your text on the left, click <strong>De-Id</strong>, and de-identified text appears on the right with PII replaced by <code>[REDACTED-email]</code>, <code>[REDACTED-name]</code>, or <code>[REDACTED-file]</code> placeholders. Click the output to copy it to your clipboard.</p>
+      <p>Email and file path detection use built-in pattern matching and are always available. For name detection, De-Id uses <a href="https://ollama.com">Ollama</a> running locally with the <code>qwen3:4b</code> model. A status indicator in the app shows whether Ollama is connected. Without Ollama, the app works in regex-only mode (emails and file paths).</p>
       <a class="github-link" href="https://github.com/sdrshnv/deid">View on GitHub</a>
     </section>
   </main>

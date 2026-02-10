@@ -186,7 +186,7 @@
         {/if}
       </button>
       {#if !ollamaConnected}
-        <p class="note">Regex-only mode (emails)</p>
+        <p class="note">Regex-only mode (emails, file paths)</p>
       {/if}
     </div>
 

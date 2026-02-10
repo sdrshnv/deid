@@ -4,6 +4,7 @@ use crate::regex_engine::{self, PiiEntity};
 pub async fn redact(text: &str) -> Result<String, String> {
     // Run regex detection (instant)
     let mut entities = regex_engine::detect_emails(text);
+    entities.extend(regex_engine::detect_files(text));
 
     // Run Ollama name detection (async, may fail)
     match ollama::detect_names(text).await {
@@ -56,6 +57,55 @@ mod tests {
         #[serde(rename = "lastName")]
         last_name: String,
         email: String,
+    }
+
+    #[tokio::test]
+    async fn test_redact_file_paths() {
+        let text = "Check /home/alice/Documents/report.pdf for details";
+        let result = redact(text).await.unwrap();
+        assert!(
+            result.contains("[REDACTED-file]"),
+            "Expected [REDACTED-file] in: {}",
+            result
+        );
+        assert!(
+            !result.contains("/home/alice/Documents/report.pdf"),
+            "File path should be redacted in: {}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_redact_file_path_with_email() {
+        let text = "Send to user@example.com, notes at /home/alice/notes.txt";
+        let result = redact(text).await.unwrap();
+        assert!(
+            result.contains("[REDACTED-email]"),
+            "Expected [REDACTED-email] in: {}",
+            result
+        );
+        assert!(
+            result.contains("[REDACTED-file]"),
+            "Expected [REDACTED-file] in: {}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_redact_mixed_file_paths() {
+        let text = r"Copy \\server\share\doc.txt and /home/bob/data.csv then email admin@corp.com";
+        let result = redact(text).await.unwrap();
+        assert_eq!(
+            result.matches("[REDACTED-file]").count(),
+            2,
+            "Expected 2 [REDACTED-file] in: {}",
+            result
+        );
+        assert!(
+            result.contains("[REDACTED-email]"),
+            "Expected [REDACTED-email] in: {}",
+            result
+        );
     }
 
     #[tokio::test]

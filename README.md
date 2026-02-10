@@ -1,6 +1,6 @@
 # De-Id
 
-Local text de-identification tool. Paste text containing personal information, and De-Id redacts emails and names — all processing stays on your machine.
+Local text de-identification tool. Paste text containing personal information, and De-Id redacts emails, names, and file paths — all processing stays on your machine.
 
 <img width="978" height="589" alt="image" src="https://github.com/user-attachments/assets/0e7e1c75-2048-48d5-8cc7-f8983eaa2379" />
 
@@ -34,7 +34,7 @@ Otherwise, go to **System Settings > Privacy & Security**, scroll down, and clic
 
 ## Prerequisites
 
-De-Id detects **email addresses** using built-in pattern matching (always available).
+De-Id detects **email addresses** and **file paths** using built-in pattern matching (always available).
 
 For **name detection**, you need [Ollama](https://ollama.com) running locally with the `qwen3:4b` model:
 
@@ -43,13 +43,13 @@ ollama pull qwen3:4b
 ollama serve   # if not already running
 ```
 
-A status indicator in the app header shows whether Ollama is connected. Without Ollama, the app falls back to regex-only mode (emails only).
+A status indicator in the app header shows whether Ollama is connected. Without Ollama, the app falls back to regex-only mode (emails and file paths only).
 
 ## How It Works
 
-The app has a two-panel layout: paste text on the left, click **De-Id**, and the de-identified text appears on the right with PII replaced by `[REDACTED-email]` or `[REDACTED-name]` placeholders. Click the output to copy it to your clipboard.
+The app has a two-panel layout: paste text on the left, click **De-Id**, and the de-identified text appears on the right with PII replaced by `[REDACTED-email]`, `[REDACTED-name]`, or `[REDACTED-file]` placeholders. Click the output to copy it to your clipboard.
 
-Detection uses a hybrid approach — regex for emails (instant) and Ollama for names (requires the local LLM). Overlapping detections are deduplicated automatically.
+Detection uses a hybrid approach — regex for emails and file paths (instant) and Ollama for names (requires the local LLM). Overlapping detections are deduplicated automatically.
 
 ## Tech Stack
 
