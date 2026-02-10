@@ -56,7 +56,3 @@ Detection uses a hybrid approach — regex for emails and file paths (instant) a
 - [Tauri v2](https://v2.tauri.app) — desktop framework
 - [SvelteKit](https://svelte.dev/docs/kit) + [Svelte 5](https://svelte.dev) — frontend
 - [Ollama](https://ollama.com) — local LLM for name detection
-
-## License
-
-MIT
